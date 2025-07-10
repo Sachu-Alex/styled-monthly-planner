@@ -9,7 +9,7 @@ import { EventManager } from '@/components/EventManager';
 import { TemplateSelector } from '@/components/TemplateSelector';
 import { CoverImageUpload } from '@/components/CoverImageUpload';
 import { ExportOptions } from '@/components/ExportOptions';
-import { ArrowLeft, Settings, Download, Image } from 'lucide-react';
+import { ArrowLeft, Settings, Download, Image, Palette } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export interface CalendarEvent {
