@@ -55,6 +55,16 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
     return startDay === 0 ? (day === 0 || day === 6) : (day === 0 || day === 6);
   };
 
+  const isSunday = (date: Date) => {
+    const day = getDay(date);
+    return day === 0;
+  };
+
+  const isSaturday = (date: Date) => {
+    const day = getDay(date);
+    return day === 6;
+  };
+
   const monthEvents = events.filter(event => {
     const eventDate = new Date(event.date);
     return eventDate.getMonth() === month && eventDate.getFullYear() === year;
@@ -69,68 +79,87 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
   };
 
   return (
-    <div className="bg-white shadow-2xl rounded-lg overflow-hidden mx-auto" style={{ width: '297mm', height: '420mm', fontSize: '9px' }}>
-      {/* Cover Image Section - Portrait optimized */}
+    <div className="bg-white shadow-lg overflow-hidden mx-auto print:shadow-none" 
+         style={{ 
+           width: '210mm', 
+           height: '297mm', 
+           fontSize: '8px',
+           fontFamily: 'Arial, sans-serif'
+         }}>
+      
+      {/* Cover Image Section with natural aspect ratio */}
       {coverImage && (
-        <div className="h-40 overflow-hidden">
+        <div className="relative h-20 overflow-hidden">
           <img
             src={coverImage}
             alt="Calendar cover"
             className="w-full h-full object-cover"
+            style={{ aspectRatio: '16/9' }}
           />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent"></div>
         </div>
       )}
 
-      {/* Header - Portrait optimized */}
-      <div className={`${template.headerBg} ${template.headerText} p-4 text-center`}>
-        <h1 className="text-3xl font-bold">{format(currentDate, 'MMMM yyyy')}</h1>
+      {/* Month Title - Centered and distinct */}
+      <div className={`${template.headerBg} ${template.headerText} py-3 text-center relative`}>
+        <h1 className="text-xl font-bold tracking-wide">
+          {format(currentDate, 'MMMM yyyy').toUpperCase()}
+        </h1>
       </div>
 
-      {/* Calendar Grid - Portrait layout */}
-      <div className="p-4">
-        <div className="grid grid-cols-7 gap-1 mb-2">
-          {weekDays.map(day => (
-            <div key={day} className="text-center font-semibold py-2 text-sm border-b-2 border-gray-300">
+      {/* Calendar Grid Section */}
+      <div className="p-2 flex-1">
+        {/* Week Day Headers */}
+        <div className="grid grid-cols-7 gap-px mb-1 bg-gray-300">
+          {weekDays.map((day, index) => (
+            <div key={day} className="bg-gray-100 text-center font-bold py-1 text-xs border-b-2 border-gray-400">
               {day}
             </div>
           ))}
         </div>
 
-        <div className="grid grid-cols-7 gap-1 mb-6">
+        {/* Calendar Days Grid */}
+        <div className="grid grid-cols-7 gap-px bg-gray-300 mb-3">
           {calendarDays.map((date, index) => {
             const dayEvents = getEventsForDate(date);
             const isCurrentMonth = isSameMonth(date, currentDate);
             const isCurrentDay = isToday(date);
             const isWeekendDay = isWeekend(date);
+            const isSun = isSunday(date);
+            const isSat = isSaturday(date);
 
             return (
               <div
                 key={index}
                 className={`
-                  border-2 ${template.gridBorder} p-2 relative
-                  ${!isCurrentMonth ? 'bg-gray-50 text-gray-400' : 'bg-white'}
-                  ${isCurrentDay ? 'bg-blue-100 border-blue-500' : ''}
-                  ${isWeekendDay && weekendsColored && isCurrentMonth ? template.weekendColor : ''}
+                  bg-white p-1 relative border
+                  ${!isCurrentMonth ? 'bg-gray-50 text-gray-400' : ''}
+                  ${isCurrentDay ? 'bg-blue-100 border-blue-500' : 'border-gray-200'}
+                  ${isSun && weekendsColored && isCurrentMonth ? 'text-red-600 bg-red-50' : ''}
+                  ${isSat && weekendsColored && isCurrentMonth ? 'text-blue-600 bg-blue-50' : ''}
                 `}
-                style={{ minHeight: '60px' }}
+                style={{ minHeight: '32mm', height: '32mm' }}
               >
-                <div className="font-bold text-sm mb-1">
+                <div className="font-bold text-xs mb-1">
                   {format(date, 'd')}
                 </div>
                 
+                {/* Event labels - stackable with max 2-3 visible */}
                 {dayEvents.length > 0 && (
-                  <div className="space-y-1">
-                    {dayEvents.slice(0, 3).map(event => (
+                  <div className="space-y-0.5">
+                    {dayEvents.slice(0, 2).map(event => (
                       <div
                         key={event.id}
-                        className={`text-xs px-1 py-0.5 rounded text-white ${template.eventColors[event.category]} truncate`}
-                        style={{ fontSize: '7px' }}
+                        className={`text-xs px-1 py-0.5 rounded text-white ${template.eventColors[event.category]} truncate leading-tight`}
+                        style={{ fontSize: '6px', lineHeight: '1.2' }}
                       >
                         {event.icon} {event.title}
                       </div>
                     ))}
-                    {dayEvents.length > 3 && (
-                      <div className="text-xs text-gray-500" style={{ fontSize: '6px' }}>+{dayEvents.length - 3} more</div>
+                    {dayEvents.length > 2 && (
+                      <div className="text-xs text-gray-600 font-semibold" style={{ fontSize: '5px' }}>
+                        +{dayEvents.length - 2} more
+                      </div>
                     )}
                   </div>
                 )}
@@ -140,54 +169,49 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
         </div>
       </div>
 
-      {/* Monthly Summary Sections - Portrait layout */}
-      <div className="px-4 pb-4 space-y-3">
-        <div className="grid grid-cols-1 gap-3">
-          <div className="bg-teal-50 p-3 rounded-lg">
-            <h3 className="font-bold text-teal-800 mb-2 text-sm">Events & Celebrations</h3>
-            <div className="grid grid-cols-2 gap-2">
-              {[...eventsByCategory.event, ...eventsByCategory.celebration].map(event => (
-                <div key={event.id} className="text-xs flex items-center" style={{ fontSize: '9px' }}>
-                  <span className="mr-2">{event.icon}</span>
-                  <span>{format(new Date(event.date), 'MMM d')}: {event.title}</span>
+      {/* Enhanced Summary Section - Three column layout with pastel cards */}
+      <div className="px-2 pb-2">
+        <div className="grid grid-cols-3 gap-1 mb-2">
+          {/* Events & Celebrations */}
+          <div className="bg-gradient-to-br from-teal-50 to-teal-100 p-2 rounded-lg border border-teal-200">
+            <h3 className="font-bold text-teal-800 mb-1 text-xs">Events & Celebrations</h3>
+            <div className="space-y-0.5">
+              {[...eventsByCategory.event, ...eventsByCategory.celebration].slice(0, 4).map(event => (
+                <div key={event.id} className="text-xs flex items-center leading-tight" style={{ fontSize: '7px' }}>
+                  <span className="mr-1 text-sm">{event.icon}</span>
+                  <span className="text-teal-700">
+                    {format(new Date(event.date), 'MMM dd')} – {event.title}
+                  </span>
                 </div>
               ))}
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="bg-blue-50 p-3 rounded-lg">
-              <h3 className="font-bold text-blue-800 mb-2 text-sm">Tech Talks</h3>
-              <div className="space-y-1">
-                {eventsByCategory.techtalk.map(event => (
-                  <div key={event.id} className="text-xs flex items-center" style={{ fontSize: '9px' }}>
-                    <span className="mr-2">{event.icon}</span>
-                    <span>{format(new Date(event.date), 'MMM d')}: {event.title}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="bg-red-50 p-3 rounded-lg">
-              <h3 className="font-bold text-red-800 mb-2 text-sm">Holidays</h3>
-              <div className="space-y-1">
-                {eventsByCategory.holiday.map(event => (
-                  <div key={event.id} className="text-xs flex items-center" style={{ fontSize: '9px' }}>
-                    <span className="mr-2">{event.icon}</span>
-                    <span>{format(new Date(event.date), 'MMM d')}: {event.title}</span>
-                  </div>
-                ))}
-              </div>
+          {/* Tech Talks */}
+          <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-2 rounded-lg border border-blue-200">
+            <h3 className="font-bold text-blue-800 mb-1 text-xs">Tech Talks</h3>
+            <div className="space-y-0.5">
+              {eventsByCategory.techtalk.slice(0, 4).map(event => (
+                <div key={event.id} className="text-xs flex items-center leading-tight" style={{ fontSize: '7px' }}>
+                  <span className="mr-1 text-sm">{event.icon}</span>
+                  <span className="text-blue-700">
+                    {format(new Date(event.date), 'MMM dd')} – {event.title}
+                  </span>
+                </div>
+              ))}
             </div>
           </div>
 
-          <div className="bg-pink-50 p-3 rounded-lg">
-            <h3 className="font-bold text-pink-800 mb-2 text-sm">Birthdays</h3>
-            <div className="grid grid-cols-2 gap-2">
-              {eventsByCategory.birthday.map(event => (
-                <div key={event.id} className="text-xs flex items-center" style={{ fontSize: '9px' }}>
-                  <span className="mr-2">{event.icon}</span>
-                  <span>{format(new Date(event.date), 'MMM d')}: {event.title}</span>
+          {/* Holidays & Birthdays */}
+          <div className="bg-gradient-to-br from-pink-50 to-pink-100 p-2 rounded-lg border border-pink-200">
+            <h3 className="font-bold text-pink-800 mb-1 text-xs">Holidays & Birthdays</h3>
+            <div className="space-y-0.5">
+              {[...eventsByCategory.holiday, ...eventsByCategory.birthday].slice(0, 4).map(event => (
+                <div key={event.id} className="text-xs flex items-center leading-tight" style={{ fontSize: '7px' }}>
+                  <span className="mr-1 text-sm">{event.icon}</span>
+                  <span className="text-pink-700">
+                    {format(new Date(event.date), 'MMM dd')} – {event.title}
+                  </span>
                 </div>
               ))}
             </div>
