@@ -22,9 +22,9 @@ export const ExportOptions: React.FC<ExportOptionsProps> = ({
 
   const getQualityScale = () => {
     switch (quality) {
-      case 'high': return 3; // 300 DPI equivalent
-      case 'medium': return 2; // 200 DPI equivalent
-      case 'low': return 1; // 100 DPI equivalent
+      case 'high': return 2.5; // Reduced for better performance
+      case 'medium': return 2;
+      case 'low': return 1.5;
       default: return 2;
     }
   };
@@ -35,35 +35,58 @@ export const ExportOptions: React.FC<ExportOptionsProps> = ({
     setIsExporting(true);
     try {
       const scale = getQualityScale();
+      
+      // Wait a bit for any pending renders
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       const canvas = await html2canvas(calendarRef.current, {
         scale,
         useCORS: true,
         allowTaint: true,
         backgroundColor: '#ffffff',
-        width: calendarRef.current.offsetWidth,
-        height: calendarRef.current.offsetHeight
+        width: calendarRef.current.scrollWidth,
+        height: calendarRef.current.scrollHeight,
+        scrollX: 0,
+        scrollY: 0
       });
 
       const fileName = `calendar-${monthName.toLowerCase().replace(' ', '-')}`;
 
       if (exportFormat === 'pdf') {
-        // A3 dimensions in mm: 297 x 420
+        // A3 dimensions: 297mm x 420mm
         const pdf = new jsPDF({
           orientation: 'portrait',
           unit: 'mm',
-          format: 'a3'
+          format: [297, 420] // width x height in mm
         });
 
-        const imgWidth = 297; // A3 width in mm
-        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+        // Calculate dimensions to fit A3 without stretching
+        const pdfWidth = 297;
+        const pdfHeight = 420;
+        const canvasRatio = canvas.width / canvas.height;
+        const pdfRatio = pdfWidth / pdfHeight;
+
+        let imgWidth, imgHeight, offsetX = 0, offsetY = 0;
+
+        if (canvasRatio > pdfRatio) {
+          // Canvas is wider than PDF ratio - fit to width
+          imgWidth = pdfWidth;
+          imgHeight = pdfWidth / canvasRatio;
+          offsetY = (pdfHeight - imgHeight) / 2;
+        } else {
+          // Canvas is taller than PDF ratio - fit to height
+          imgHeight = pdfHeight;
+          imgWidth = pdfHeight * canvasRatio;
+          offsetX = (pdfWidth - imgWidth) / 2;
+        }
 
         pdf.addImage(
-          canvas.toDataURL('image/jpeg', 0.95),
+          canvas.toDataURL('image/jpeg', 0.92),
           'JPEG',
-          0,
-          0,
+          offsetX,
+          offsetY,
           imgWidth,
-          Math.min(imgHeight, 420) // A3 height in mm
+          imgHeight
         );
 
         pdf.save(`${fileName}.pdf`);
@@ -71,7 +94,7 @@ export const ExportOptions: React.FC<ExportOptionsProps> = ({
         // Export as image
         const link = document.createElement('a');
         link.download = `${fileName}.${exportFormat}`;
-        link.href = canvas.toDataURL(`image/${exportFormat}`, 0.95);
+        link.href = canvas.toDataURL(`image/${exportFormat}`, 0.92);
         link.click();
       }
     } catch (error) {
@@ -126,9 +149,9 @@ export const ExportOptions: React.FC<ExportOptionsProps> = ({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="high">High (300 DPI)</SelectItem>
+              <SelectItem value="high">High (250 DPI)</SelectItem>
               <SelectItem value="medium">Medium (200 DPI)</SelectItem>
-              <SelectItem value="low">Low (100 DPI)</SelectItem>
+              <SelectItem value="low">Low (150 DPI)</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -156,7 +179,7 @@ export const ExportOptions: React.FC<ExportOptionsProps> = ({
           <h4 className="text-sm font-semibold text-green-800 mb-1">A3 Print Specifications</h4>
           <ul className="text-xs text-green-700 space-y-1">
             <li>• Size: 297mm × 420mm (11.7" × 16.5")</li>
-            <li>• Resolution: Up to 300 DPI</li>
+            <li>• Resolution: Up to 250 DPI for optimal file size</li>
             <li>• Format: Print-ready PDF or high-res image</li>
             <li>• Orientation: Portrait</li>
           </ul>
@@ -165,8 +188,8 @@ export const ExportOptions: React.FC<ExportOptionsProps> = ({
         {exportFormat === 'pdf' && (
           <div className="p-3 bg-blue-50 rounded-lg">
             <p className="text-xs text-blue-800">
-              📄 <strong>PDF Export:</strong> Perfect for professional printing. 
-              Includes proper A3 dimensions and margins.
+              📄 <strong>PDF Export:</strong> Automatically fits to A3 size without stretching. 
+              Maintains proper aspect ratio with centered positioning.
             </p>
           </div>
         )}
